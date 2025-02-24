@@ -1,0 +1,49 @@
+# AWS CodeBuild buildspec.yml will run test stage as configured in post-build
+# NOT to run test stage in buildspec.yml file and then:
+# remove "post_build"
+# artifacts remove path and add - '**/*'
+
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - echo "Installing dependencies..."
+      - apt-get update
+      - apt-get install -y wget unzip fontconfig libfreetype6 libfreetype6-dev libfontconfig1 libfontconfig1-dev
+      - python -m pip install --upgrade pip
+      - pip install -r requirements.txt
+      - pip install pytest-html
+      - PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
+      - python -m playwright install --with-deps chromium
+
+  pre_build:
+    commands:
+      - echo "Preparing for build..."
+      - mkdir -p artifacts
+
+  build:
+    commands:
+      - echo "Building the application..."
+      - # Add build commands here, such as creating artifacts
+      - echo "Build completed successfully."
+
+  post_build:
+    commands:
+      - echo "Running tests..."
+      - export HEADLESS=true
+      - pytest -s -v tests/test_parameter_apple_search_module.py --html=report_playwright_bdd.html --maxfail=3 --disable-warnings -v
+      - cp report_playwright_bdd.html artifacts/
+
+artifacts:
+  files:
+    - artifacts/report_playwright_bdd.html
+    - screenshots/**/*
+  discard-paths: no
+
+cache:
+  paths:
+    - '/root/.cache/pip/**/*'
+    - '/root/.cache/ms-playwright/**/*'

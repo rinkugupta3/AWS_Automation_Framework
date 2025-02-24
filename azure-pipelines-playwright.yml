@@ -1,0 +1,64 @@
+trigger:
+  branches:
+    include:
+      - main
+      - stage
+      - dev
+
+pool:
+  vmImage: 'ubuntu-latest'  # Or change to 'windows-latest' if needed
+
+variables:
+  PipCache: $(Pipeline.Workspace)/.pip_cache
+  HEADLESS: 'true'  # Run tests in headless mode
+
+steps:
+  # Set up Python environment
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.11'  # Specify your Python version here and check locally with "python --version"
+      addToPath: true
+
+  # Create Pip Cache Directory
+  - script: |
+      mkdir "$(PipCache)" || echo "Cache directory already exists"
+    displayName: 'Create Pip Cache Directory'
+
+  # Cache Python packages
+  - task: Cache@2
+    inputs:
+      key: 'python | "$(Agent.OS)"  | requirements.txt'
+      restoreKeys: |
+        python | "$(Agent.OS)"
+      path: $(PipCache)
+    continueOnError: true
+
+  # Install Python dependencies
+  - script: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+      pip install pytest-html
+    displayName: 'Install Python Dependencies'
+
+  # Install Playwright Browsers
+  - script: |
+      python -m playwright install --with-deps
+    displayName: 'Install Playwright Browsers with Dependencies'
+
+  # Run Playwright BDD Tests with headless mode enabled
+  - script: |
+      export HEADLESS=true  # Ensure headless mode for CI
+      pytest --html=report_playwright_bdd.html --maxfail=3 --disable-warnings -v
+    displayName: 'Run Playwright BDD Tests'
+
+  # Publish HTML report as artifact
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: 'report_playwright_bdd.html'
+      ArtifactName: 'TestReport'
+
+  # Publish screenshots folder
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: 'screenshots'
+      artifactName: 'Screenshots'

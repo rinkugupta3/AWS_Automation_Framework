@@ -1,0 +1,12 @@
+The products "MacBook Pro" and "iPhone 16 Pro" are dynamically inserted into the search field
+via the parameterized BDD step @when('I search for "{product}"').
+This step allows any product name passed from the feature file to be used in the search.
+
+Explanation:
+Product Name in Search: When you write When I search for "MacBook Pro" in the feature file,
+the string "MacBook Pro" is passed as the product argument to the search_for_product function in the script.
+Similarly, for When I search for "iPhone 16 Pro", the string "iPhone 16 Pro" is passed as the product argument.
+
+Adding Product to Bag: The same product argument is used in the step
+ @when("I add the first {product} result to the bag"),
+ ensuring that the correct product is selected and added to the bag.
