@@ -11,8 +11,8 @@ phases:
       python: 3.11
     commands:
       - echo "Installing dependencies..."
-      - apt-get update
-      - apt-get install -y wget unzip fontconfig libfreetype6 libfreetype6-dev libfontconfig1 libfontconfig1-dev
+      - yum update -y
+      - yum install -y wget unzip fontconfig freetype-devel fontconfig-devel
       - python -m pip install --upgrade pip
       - pip install -r requirements.txt
       - pip install pytest-html

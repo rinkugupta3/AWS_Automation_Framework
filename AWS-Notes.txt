@@ -1,0 +1,302 @@
+Create an S3 Bucket:
+
+Go to AWS Console → Search for "S3" → Click "S3"
+Click "Create bucket"
+Enter bucket details:
+CopyBucket name: [your-project-name]-test-artifacts (e.g., playwright-test-artifacts)
+Region: [select same region as your CodeBuild project]
+Block Public Access settings: Keep all blocks enabled (default)
+Bucket Versioning: Enable
+Default encryption: Enable
+
+Click "Create bucket"
+
+
+Create IAM Policy for S3 Access:
+
+Go to AWS Console → Search for "IAM" → Click "IAM"
+Click "Policies" → "Create Policy"
+Click "JSON" tab and paste:
+
+jsonCopy{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:GetBucketLocation",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::[your-bucket-name]",
+                "arn:aws:s3:::[your-bucket-name]/*"
+            ]
+        }
+    ]
+}
+
+Replace [your-bucket-name] with your actual bucket name
+Click "Next" → Name it "CodeBuild-S3-Artifacts-Access"
+Click "Create policy"
+
+
+Attach Policy to CodeBuild Role:
+
+In IAM, click "Roles"
+Find your CodeBuild service role (usually starts with "codebuild-")
+Click the role → "Attach policies"
+Search for "CodeBuild-S3-Artifacts-Access"
+Select it and click "Attach policy"
+
+
+Configure CodeBuild Project Artifacts:
+
+Go to CodeBuild → Your project → "Edit" → "Artifacts"
+Configure settings:
+
+CopyType: Amazon S3
+Bucket name: [select your created bucket]
+Name: test-reports-$(date +%Y-%m-%d)
+Path: (leave empty if you want files in root)
+Namespace type: Build ID
+Artifact packaging: None
+
+Click "Update artifacts"
+
+
+Verify Buildspec.yml Configuration:
+
+Ensure your buildspec.yml includes artifact configuration:
+
+yamlCopyartifacts:
+  files:
+    - report_playwright_bdd.html
+    - screenshots/**/*
+  name: test-reports-$(date +%Y-%m-%d)
+  discard-paths: no
+
+Run a Test Build:
+
+Start a new build in CodeBuild
+After completion:
+
+Go to S3 bucket
+You should see a folder with format: test-reports-[date]/
+Inside will be your HTML report and screenshots folder
+
+
+
+
+Set up S3 Lifecycle Rules (Optional but Recommended):
+
+In S3, select your bucket → "Management"
+Create lifecycle rule:
+
+CopyRule name: Delete-Old-Artifacts
+Rule scope: Entire bucket
+Action: Delete old versions
+Timeframe: After 30 days (or your preferred retention period)
+
+complete CI/CD pipeline using AWS CodePipeline for your Playwright automation project. Here's a step-by-step guide:
+
+Source Stage Setup (GitHub)
+
+Go to AWS Console → CodePipeline → Create Pipeline
+Basic Settings:
+CopyPipeline name: playwright-automation-pipeline
+Service role: New service role
+Role name: AWSCodePipelineServiceRole-playwright
+Allow AWS CodePipeline to create a service role: Yes
+
+Source Provider Settings:
+CopySource provider: GitHub (Version 2)
+Connection: Create new connection
+Connection name: github-playwright-connection
+
+Click "Connect to GitHub" and authorize AWS
+Select:
+CopyRepository name: [your repository]
+Branch name: main (or your preferred branch)
+Output artifact format: CodePipeline default
+
+
+
+Create IAM Policy for Pipeline
+
+Go to IAM → Policies → Create Policy
+Use this JSON:
+
+jsonCopy{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "codebuild:BatchGetBuilds",
+                "codebuild:StartBuild",
+                "codebuild:BatchGetBuildBatches",
+                "codebuild:StartBuildBatch",
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:GetBucketVersioning"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+Name it: "CodePipeline-Playwright-Policy"
+Attach this policy to your pipeline role
+
+
+Build Stage Setup
+
+Add build stage:
+CopyBuild provider: AWS CodeBuild
+Region: [your region]
+Project name: [your existing CodeBuild project]
+Build type: Single build
+
+
+
+Deploy Stage Setup (Optional)
+
+If you want to deploy test results to a web server:
+CopyDeploy provider: Amazon S3
+Region: [your region]
+Bucket: [your reports bucket]
+S3 object key: reports/
+Extract file before deploy: Yes
+
+
+
+Update CodeBuild Project
+
+Go to your CodeBuild project
+Edit → Source
+Change source to:
+CopySource provider: AWS CodePipeline
+
+
+
+Create buildspec.yml with pipeline support:
+
+AWS CodeBuild buildspec.ymlClick to open codeTap to open
+
+Set Up Pipeline Notifications (Optional)
+
+Go to your pipeline → Settings → Notifications
+Create notification rule:
+CopyRule name: pipeline-status
+Events: All status changes
+Target type: SNS topic
+
+
+
+Test the Pipeline
+
+Make a commit to your repository
+Pipeline should automatically trigger
+Monitor each stage:
+
+Source: Code checkout
+Build: Test execution
+Deploy: Report publishing
+
+
+
+
+Configure Pipeline Triggers
+
+Go to your pipeline → Edit
+Click on the source stage → Edit stage
+Configure detection options:
+CopyDetection option: AWS CloudWatch Events
+Trigger on: Push to repository
+
+
+
+Best Practices:
+
+Set up branch protection rules in GitHub
+Configure test failure thresholds
+Set up proper cleanup for old reports
+Monitor pipeline execution time
+Set up cost monitoring
+
+Create CodePipeline
+
+Go to AWS Console → CodePipeline → Create Pipeline
+
+CopyPipeline settings:
+- Pipeline name: playwright-automation-pipeline
+- Service role: New service role
+- Allow AWS CodePipeline to create a service role: Yes
+- Role name: [auto-generated]
+
+Add Source Stage
+CopySource:
+- Source provider: GitHub (Version 2)
+- Click "Connect to GitHub"
+- Give connection a name: github-playwright-connection
+- Complete GitHub authorization
+
+Repository details:
+- Repository: [select your repository]
+- Branch: [select your branch, e.g., main]
+- Output artifact format: CodePipeline default
+
+Add Build Stage
+CopyBuild:
+- Build provider: AWS CodeBuild
+- Region: [your region]
+- Project name: [select your existing CodeBuild project]
+
+Update buildspec.yml to work with pipeline:
+
+AWS CodeBuild buildspec.ymlClick to open codeTap to open
+
+Verify Pipeline Configuration
+
+Click "Create pipeline"
+Pipeline will attempt first run automatically
+Verify each stage:
+
+Source: Fetches code from GitHub
+Build: Runs tests via CodeBuild
+
+
+
+
+Test the Workflow
+
+Make a small change to your repository
+Commit and push to your branch
+Watch pipeline execution:
+
+Pipeline should trigger automatically
+Source stage should fetch latest code
+Build stage should run tests
+Check artifacts in S3 bucket
+
+
+
+
+Monitor Pipeline
+
+View execution history
+Check detailed logs in CodeBuild
+Verify artifacts in S3
+
+
+
+The workflow will now:
+
+Detect any push to your GitHub repository
+Automatically trigger the pipeline
+Pull the latest code
+Execute your tests in CodeBuild
+Store results in S3
