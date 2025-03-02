@@ -3,6 +3,7 @@
 # Build Phase: Runs the tests and generates test reports.
 # Artifacts: Specifies the files to be included in the output artifacts.
 # Cache: Specifies paths to be cached for faster builds.
+# added yum command for Amazon Linux
 
 version: 0.2
 
@@ -18,7 +19,13 @@ phases:
       - pip install -r requirements.txt
       - pip install pytest-html
       - pip install playwright
-      - python -m playwright install --with-deps chromium
+      - echo "Verifying playwright installation..."
+      - playwright --version
+      - echo "Setting up playwright browsers..."
+      - export PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
+      - mkdir -p $PLAYWRIGHT_BROWSERS_PATH
+      - python -m playwright install chromium
+      - echo "Playwright dependencies installed."
 
   pre_build:
     commands:

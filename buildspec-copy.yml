@@ -2,6 +2,7 @@
 # NOT to run test stage in buildspec.yml file and then:
 # remove "post_build"
 # artifacts remove path and add - '**/*'
+# added yum command for Amazon Linux
 
 version: 0.2
 
@@ -16,24 +17,24 @@ phases:
       - python -m pip install --upgrade pip
       - pip install -r requirements.txt
       - pip install pytest-html
-      - PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
-      - python -m playwright install --with-deps chromium
+      - pip install playwright
+      - echo "Verifying playwright installation..."
+      - playwright --version
+      - echo "Setting up playwright browsers..."
+      - export PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
+      - mkdir -p $PLAYWRIGHT_BROWSERS_PATH
+      - python -m playwright install chromium
+      - echo "Playwright dependencies installed."
 
   pre_build:
     commands:
-      - echo "Preparing for build..."
+      - echo "Preparing for tests..."
+      - export HEADLESS=true
       - mkdir -p artifacts
 
   build:
     commands:
-      - echo "Building the application..."
-      - # Add build commands here, such as creating artifacts
-      - echo "Build completed successfully."
-
-  post_build:
-    commands:
       - echo "Running tests..."
-      - export HEADLESS=true
       - pytest -s -v tests/test_parameter_apple_search_module.py --html=report_playwright_bdd.html --maxfail=3 --disable-warnings -v
       - cp report_playwright_bdd.html artifacts/
 
@@ -46,4 +47,3 @@ artifacts:
 cache:
   paths:
     - '/root/.cache/pip/**/*'
-    - '/root/.cache/ms-playwright/**/*'
